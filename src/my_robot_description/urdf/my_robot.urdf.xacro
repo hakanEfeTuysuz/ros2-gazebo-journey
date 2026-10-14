@@ -122,5 +122,7 @@
             <publish_wheel_tf>true</publish_wheel_tf>
         </plugin>
     </gazebo>
+<!-- LIDAR Sensör Modülünü Dahil Et -->
+    <xacro:include filename="$(find my_robot_description)/urdf/lidar.xacro" />
 
 </robot>

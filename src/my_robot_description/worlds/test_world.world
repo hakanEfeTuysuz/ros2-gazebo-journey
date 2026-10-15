@@ -1,0 +1,85 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <world name="default">
+
+    <include>
+      <uri>model://sun</uri>
+    </include>
+
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+
+    <model name="outer_walls">
+      <static>true</static>
+      <link name="north_wall">
+        <pose>3 0 0.5 0 0 0</pose>
+        <collision name="collision">
+          <geometry><box><size>0.2 6.2 1.0</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.2 6.2 1.0</size></box></geometry>
+        </visual>
+      </link>
+      <link name="south_wall">
+        <pose>-3 0 0.5 0 0 0</pose>
+        <collision name="collision">
+          <geometry><box><size>0.2 6.2 1.0</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.2 6.2 1.0</size></box></geometry>
+        </visual>
+      </link>
+      <link name="east_wall">
+        <pose>0 -3 0.5 0 0 0</pose>
+        <collision name="collision">
+          <geometry><box><size>6.0 0.2 1.0</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>6.0 0.2 1.0</size></box></geometry>
+        </visual>
+      </link>
+      <link name="west_wall">
+        <pose>0 3 0.5 0 0 0</pose>
+        <collision name="collision">
+          <geometry><box><size>6.0 0.2 1.0</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>6.0 0.2 1.0</size></box></geometry>
+        </visual>
+      </link>
+    </model>
+
+    <model name="inner_obstacles">
+      <static>true</static>
+      <link name="pillar_1">
+        <pose>1.5 1.2 0.5 0 0 0</pose>
+        <collision name="collision">
+          <geometry><cylinder><radius>0.35</radius><length>1.0</length></cylinder></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><cylinder><radius>0.35</radius><length>1.0</length></cylinder></geometry>
+        </visual>
+      </link>
+      <link name="pillar_2">
+        <pose>-1.2 -1.5 0.5 0 0 0</pose>
+        <collision name="collision">
+          <geometry><cylinder><radius>0.35</radius><length>1.0</length></cylinder></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><cylinder><radius>0.35</radius><length>1.0</length></cylinder></geometry>
+        </visual>
+      </link>
+      <link name="wall_divider">
+        <pose>1.2 -1.2 0.5 0 0 0.785</pose>
+        <collision name="collision">
+          <geometry><box><size>1.5 0.2 1.0</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>1.5 0.2 1.0</size></box></geometry>
+        </visual>
+      </link>
+    </model>
+
+  </world>
+</sdf>

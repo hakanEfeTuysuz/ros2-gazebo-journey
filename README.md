@@ -67,7 +67,7 @@ ros2 launch nav2_bringup rviz_launch.py
 > `nav2_params.yaml` içindeki `default_nav_to_pose_bt_xml` yolu **mutlak** yazılmıştır
 > (`/home/hakanefe/...`). Farklı bir kullanıcı/makinede bu satırı kendi yoluna göre değiştir.
 
-`my_robot_core/obstacle_avoidance` node'u Nav2 ile **aynı anda çalıştırılmamalıdır** (bkz. Bilinen hatalar).
+`my_robot_core/obstacle_avoidance` node'u Nav2 ile **aynı anda çalıştırılmamalıdır** (bkz. Notlar).
 
 ## Robot geometrisi
 
@@ -97,45 +97,14 @@ TF zinciri: `map → odom → base_footprint → base_link → laser_frame`
 
 Diğer: hız limitleri tutarlı hale getirildi (`max_vel_x 0.20`, `max_vel_theta 1.0`, ivme 0.5 / 1.5), AMCL lidar menzili gerçek değerlere (0.12 – 8.0 m) çekildi, hedef toleransı 0.15 m yapıldı.
 
-## Bilinen hatalar (düzeltilecek)
+## Geliştirilecekler
 
-### 1. Köşeye / duvar kenarına verilen hedeflerde robot takılıyor (ana açık hata)
+- **Köşe hedefleri:** Duvar ya da köşe kenarına verilen hedeflerde robot bazen yaklaşıp takılabiliyor. Hedef toleransları ve planlayıcı `tolerance` değeri bu duruma göre ayarlanacak.
+- **Dönme yarıçapı:** Aks gövdenin biraz gerisinde olduğu için yerinde dönerken ön köşe geniş bir yay çiziyor. Gerekirse tekerlekler gövde ortasına alınıp arkaya ikinci bir kaster eklenecek.
+- **Gerçek robota geçiş:** `odometry_source = 1` (Gazebo gerçek konumu) sadece simülasyon içindir. Gerçek robotta encoder odometrisine geçilecek.
 
-Robot köşeye girip duvarların "yasak bandına" (costmap'te inscribed bölge) sıkışıyor, hedefe ulaşıp işi bitiremiyor.
+## Notlar
 
-**Muhtemel neden (henüz log ile doğrulanmadı):** Hedef, duvarın yasak bandının içinde kalıyor. Planlayıcı hedefi en yakın serbest hücreye çekiyor, ancak robot hedefin 0.15 m yakınına giremiyor. DWB "geçerli yol yok" diyor, BackUp geri çıkarıyor, yeniden planlama robotu aynı noktaya geri götürüyor ve deneme hakkı bitince hedef iptal oluyor.
-
-**Planlanan çözüm:**
-- Hedef toleransını (`xy_goal_tolerance`) ve planlayıcı `tolerance` değerini yasak bandı kapsayacak şekilde artırmak
-- Köşe testi sırasında Terminal 2 loglarını kaydedip hangi kurtarma kaç kez çalıştı, hedef neden iptal oldu kontrol etmek
-
-### 2. Büyük yerinde dönme yarıçapı (~0.44 m)
-
-Aks gövdenin 0.15 m gerisinde olduğu için ön köşe aksa göre 0.44 m uzakta. Duvar yakınında nihai yön dönüşü gövdeyi sıkıştırıyor.
-
-**Planlanan çözüm:** Tekerlekleri gövde ortasına almak ve arkaya ikinci bir kaster eklemek. Dönme yarıçapı ~0.31 m'ye iner, robotun ön/arka ayrımı kalkar. Footprint simetrik hale gelir: `[[0.25, 0.19], [0.25, -0.19], [-0.25, -0.19], [-0.25, 0.19]]`.
-
-### 3. Hedefte nihai yön
-
-RViz'de Nav2 Goal'a sadece tıklarsan hedef yönü 0° olur ve robot varınca oraya dönmeye çalışır. Köşelerde bu dönüş duvara doğru olabilir.
-
-- Geçici çözüm: okun yönünü odanın içine doğru sürükle
-- Alternatif: `general_goal_checker` altında `yaw_goal_tolerance: 3.14` yaparak hedefte dönmeyi tamamen kapat
-
-### 4. `obstacle_avoidance` ile Nav2 çakışması
-
-`my_robot_core/obstacle_avoidance` node'u `/cmd_vel`'e yayın yapar, Nav2 de aynı topic'e yazar. Birlikte çalıştırılırsa robot "sapıtır". Ayrıca ışın indekslerini -π..π taramaya göre varsayar (ön = indeks 180).
-
-### 5. Diğer notlar
-
-- `odometry_source = 1` (Gazebo gerçek konumu) **sadece simülasyon içindir**. Gerçek robotta encoder odometrisine geçilmeli, AMCL `alpha1..4` değerleri yeniden ayarlanmalı.
-- BackUp, arkada engel varsa güvenlik kontrolüyle durur. Hem önü hem arkası sıkışık robotta sonraki kurtarmalara (temizleme, Spin) geçilir.
-- Lidar şasinin 3 cm üstünde havada duruyor (kozmetik). İleride ince bir direk eklenebilir.
-- `nav2_params.yaml` içindeki BT dosya yolu mutlaktır (bkz. Kurulum).
-
-## Sıradaki adımlar
-
-1. Köşe testinde Terminal 2 loglarını toplayıp 1. hatanın nedenini doğrulamak
-2. Hedef toleranslarını ve `tolerance` değerini ayarlamak
-3. Gerekirse tekerlekleri gövde ortasına alıp ikinci kaster eklemek (2. hata)
-4. BT yolunu mutlak yerine launch dosyası üzerinden vermek
+- RViz'de **Nav2 Goal** verirken oku sürükleyerek robotun bakacağı yönü seç. Köşe hedeflerinde oku odanın içine doğru çevirmek en rahatı.
+- `my_robot_core/obstacle_avoidance` node'u Nav2 ile aynı anda çalıştırılmamalıdır, ikisi de `/cmd_vel`'e yazar.
+- `nav2_params.yaml` içindeki davranış ağacı yolu mutlaktır, farklı bir makinede kendi yoluna göre değiştirilmelidir.

@@ -122,12 +122,12 @@ controller_server:
     progress_checker:
       plugin: "nav2_controller::SimpleProgressChecker"
       required_movement_radius: 0.5
-      movement_time_allowance: 20.0
+      movement_time_allowance: 8.0
 
     general_goal_checker:
       stateful: True
       plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 0.15
+      xy_goal_tolerance: 0.30
       yaw_goal_tolerance: 3.14
 
     FollowPath:
@@ -154,7 +154,7 @@ controller_server:
       linear_granularity: 0.05
       angular_granularity: 0.025
       transform_tolerance: 0.3
-      xy_goal_tolerance: 0.15
+      xy_goal_tolerance: 0.30
       trans_stopped_velocity: 0.1
       rot_stopped_velocity: 0.1
       short_circuit_trajectory_evaluation: True
@@ -262,7 +262,7 @@ planner_server:
     planner_plugins: ["GridBased"]
     GridBased:
       plugin: "nav2_navfn_planner/NavfnPlanner"
-      tolerance: 0.3
+      tolerance: 0.5
       use_astar: false
       allow_unknown: false
 

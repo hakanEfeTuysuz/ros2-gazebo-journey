@@ -108,7 +108,7 @@
         <minDepth>0.001</minDepth>
     </gazebo>
 
-    <!-- 6. GAZEBO DİFERANSİYEL SÜRÜŞ EKLENTİSİ -->
+    <!-- 6. GAZEBO DİFERANSİYEL SÜRÜŞ VE JOINT STATE EKLENTİLERİ -->
     <gazebo>
         <plugin name="diff_drive" filename="libgazebo_ros_diff_drive.so">
             <update_rate>50</update_rate>
@@ -118,16 +118,21 @@
             <wheel_separation>0.34</wheel_separation>
             <wheel_diameter>0.12</wheel_diameter>
 
-            <max_wheel_torque>5</max_wheel_torque>
-            <!-- 10 rad/s^2 ≈ 0.6 m/s^2 doğrusal, ≈ 3.5 rad/s^2 açısal (Nav2 limitlerinden gevşek) -->
-            <max_wheel_acceleration>10.0</max_wheel_acceleration>
+            <max_wheel_torque>10</max_wheel_torque>
+            <max_wheel_acceleration>5.0</max_wheel_acceleration>
 
             <odometry_source>1</odometry_source>
             <odometry_frame>odom</odometry_frame>
             <robot_base_frame>base_footprint</robot_base_frame>
             <publish_odom>true</publish_odom>
             <publish_odom_tf>true</publish_odom_tf>
-            <publish_wheel_tf>true</publish_wheel_tf>
+            <publish_wheel_tf>false</publish_wheel_tf>
+        </plugin>
+
+        <plugin name="gazebo_ros_joint_state_publisher" filename="libgazebo_ros_joint_state_publisher.so">
+            <update_rate>50</update_rate>
+            <joint_name>left_wheel_joint</joint_name>
+            <joint_name>right_wheel_joint</joint_name>
         </plugin>
     </gazebo>
 

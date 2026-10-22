@@ -22,16 +22,18 @@ sudo apt install ros-humble-navigation2 ros-humble-nav2-bringup ros-humble-gazeb
 ## Klasör yapısı
 
 ```
-src/
-├── my_robot_description/
-│   ├── urdf/               my_robot.urdf.xacro, lidar.xacro
-│   ├── worlds/             test_world.world (5.8 x 5.8 m oda, 2 silindir, 1 bölme)
-│   ├── maps/               my_world_map.yaml / .pgm
-│   ├── config/             nav2_params.yaml
-│   ├── behavior_trees/     navigate_to_pose_backup_first.xml
-│   ├── launch/             gazebo.launch.py
-│   └── robot_view.rviz
-└── my_robot_core/          obstacle_avoidance.cpp (Nav2'den bağımsız basit engel kaçınma)
+├── src/
+│   ├── my_robot_description/
+│   │   ├── urdf/               my_robot.urdf.xacro, lidar.xacro
+│   │   ├── worlds/             test_world.world (5.8 x 5.8 m oda, 2 silindir, 1 bölme)
+│   │   ├── maps/               my_world_map.yaml / .pgm
+│   │   ├── config/             nav2_params.yaml
+│   │   ├── behavior_trees/     navigate_to_pose_backup_first.xml
+│   │   ├── launch/             gazebo.launch.py
+│   │   └── robot_view.rviz
+│   └── my_robot_core/          obstacle_avoidance.cpp (Nav2'den bağımsız basit engel kaçınma)
+└── tools/
+    └── eval_check.py           DWB hata ayıklama aracı (bkz. Hata ayıklama)
 ```
 
 ## Kurulum ve çalıştırma
@@ -64,6 +66,8 @@ ros2 launch nav2_bringup bringup_launch.py use_sim_time:=true \
 ros2 launch nav2_bringup rviz_launch.py
 ```
 
+Nav2'yi yeniden başlatırken Gazebo'yu da yeniden başlatmak en temizidir. AMCL başlangıç pozunu (0, 0) olarak bekler, robot başka bir yerdeyken Nav2'yi açmak konumlandırmayı bozar.
+
 > `nav2_params.yaml` içindeki `default_nav_to_pose_bt_xml` yolu **mutlak** yazılmıştır
 > (`/home/hakanefe/...`). Farklı bir kullanıcı/makinede bu satırı kendi yoluna göre değiştir.
 
@@ -77,6 +81,7 @@ ros2 launch nav2_bringup rviz_launch.py
 - Kaster (küre) önde, sürtünmesi neredeyse sıfır
 - Lidar: `laser_frame`, 360 ışın, 0.12 – 8.0 m, 10 Hz
 - Nav2 footprint (`base_footprint` çerçevesinde): `[[0.40, 0.19], [0.40, -0.19], [-0.10, -0.19], [-0.10, 0.19]]`
+- Yerinde dönerken ön köşenin çizdiği yarıçap: yaklaşık 0.44 m
 
 TF zinciri: `map → odom → base_footprint → base_link → laser_frame`
 
@@ -89,22 +94,34 @@ TF zinciri: `map → odom → base_footprint → base_link → laser_frame`
 | 3 | Gazebo ve Nav2 ivme limitleri uyumsuz | `max_wheel_acceleration` çok düşük, `max_wheel_torque` çok yüksek | torque 5, ivme 10 rad/s², update_rate 50 | Nav2 limitlerinden gevşek |
 | 4 | Robotun arkasında hayalet engeller | Lidar şasi üstünden 2 cm yükseklikte, ışınlar kendi şasisine çarpıyordu (arkada 0.35 m'de) | Lidar `z=0.07 → 0.10` | Arka ışınlar kayboldu |
 | 5 | Haritada tek hücrelik hayalet engel | SLAM gürültüsü, (x=0.87, y=-2.14) | Hücre temizlendi | Piksel analizi |
-| 6 | Dar geçişlerde robot geçemiyor | `inflation_radius 0.55` fazla büyüktü, 1.1 m'lik boşluklar tamamen kapanıyordu | `inflation_radius 0.40`, `cost_scaling_factor 8.0` | Aynı hedef tekrar verilince geçti |
+| 6 | Dar geçişlerde robot geçemiyor | Büyük `inflation_radius` 1.1 m'lik boğazları kapatıyordu | Global costmap: `inflation_radius 0.45`, `cost_scaling_factor 6.0`. Local costmap: `0.40` / `8.0` | Boğaz genişliği haritadan hesaplandı (1.10 m), temiz bant 0.20 m |
 | 7 | Robot köşelere/duvara vuruyor | DWB `BaseObstacle` kriteri sadece merkez noktasına bakıyor, gövde köşelerine bakmıyor | `ObstacleFootprint` kriterine geçildi | Önceki vurmalar azaldı |
 | 8 | Sıkışınca geri çıkamıyor | DWB geri gitmiyor; varsayılan kurtarma sırasında BackUp en sondaydı ve çok yavaştı | Özel davranış ağacı: BackUp ilk sırada (0.30 m, 0.10 m/s). DWB'de `min_vel_x` 0.0 bırakıldı, yani normal sürüşte geri gitmez | Kurtarma sadece takılınca çalışır |
 | 9 | Frame tutarsızlığı | AMCL `base_footprint`, diğerleri `base_link` | Hepsi `base_footprint` | TF zinciri |
 | 10 | `config` / `maps` kurulmuyordu | `CMakeLists.txt` `install` komutunda yoktu | `config`, `maps`, `behavior_trees`, `robot_view.rviz` eklendi | `ls install/.../share/my_robot_description/` |
-
-Diğer: hız limitleri tutarlı hale getirildi (`max_vel_x 0.20`, `max_vel_theta 1.0`, ivme 0.5 / 1.5), AMCL lidar menzili gerçek değerlere (0.12 – 8.0 m) çekildi, hedef toleransı 0.15 m yapıldı.
+| 11 | Köşe/duvar kenarı hedeflerinde robot takılıyor | Hedef, duvarın yasak bandına düşüyor, robot hedefin 0.15 m yakınına giremiyor | `xy_goal_tolerance 0.30`, planlayıcı `tolerance 0.5`, `yaw_goal_tolerance 3.14` (hedefte dönme kapalı) | Köşe hedefleri `Goal succeeded` ile tamamlanıyor |
+| 12 | Takılma geç fark ediliyordu | `movement_time_allowance` 20 s | 8 s | Kurtarma daha erken başlıyor |
+| 13 | DWB bir yöne kilitlenebiliyor | `Oscillation` kriterinde zaman bazlı sıfırlama kapalıydı | `Oscillation.oscillation_reset_time: 1.0` | Kaynak kod okundu |
 
 ## Geliştirilecekler
 
-- **Köşe hedefleri:** Duvar ya da köşe kenarına verilen hedeflerde robot bazen yaklaşıp takılabiliyor. Hedef toleransları ve planlayıcı `tolerance` değeri bu duruma göre ayarlanacak.
+- **Çubuğun arkasındaki hedefler:** Uzun çubuğun arkasındaki renkli (inflation) bölgeye hedef verilince robot bazen yavaşlayıp duruyor. Beyaz bölgelerdeki hedefler sorunsuz çalışıyor. Hata ayıklamada DWB'nin 819 yolunun tamamının geçerli olduğu, ama "olduğun yerde kal" seçeneğinin ileri gitmekten yaklaşık 1 puan iyi çıktığı görüldü. `PreferForward` kriteri denendi (`scale 4.0`, `theta_scale 2.0`), tek başına yetmedi. Sıradaki: robotun engele gerçek mesafesinin kontrolü ve kriter ağırlıklarının ayarı.
 - **Dönme yarıçapı:** Aks gövdenin biraz gerisinde olduğu için yerinde dönerken ön köşe geniş bir yay çiziyor. Gerekirse tekerlekler gövde ortasına alınıp arkaya ikinci bir kaster eklenecek.
 - **Gerçek robota geçiş:** `odometry_source = 1` (Gazebo gerçek konumu) sadece simülasyon içindir. Gerçek robotta encoder odometrisine geçilecek.
 
+## Hata ayıklama
+
+`tools/eval_check.py`, DWB'nin o an denediği tüm yolları hız gruplarına ayırır, kaçının geçerli olduğunu, geçersizlerin hangi kriterle elendiğini ve kazanan yolun puan dökümünü yazar. Robot takılıyken çalıştırılır (`debug_trajectory_details: True` açık olmalıdır):
+
+```bash
+cd ~/ros2-gazebo-journey && source /opt/ros/humble/setup.bash && source install/setup.bash
+python3 tools/eval_check.py
+```
+
+Kriter ağırlıkları `nav2_params.yaml` içindeki değerlerle birebir aynı değildir. `PathAlign`, `GoalAlign`, `PathDist`, `GoalDist` için DWB ölçeği çözünürlükle çarpar (yaml 32 → etkin 0.80, 24 → 0.60).
+
 ## Notlar
 
-- RViz'de **Nav2 Goal** verirken oku sürükleyerek robotun bakacağı yönü seç. Köşe hedeflerinde oku odanın içine doğru çevirmek en rahatı.
+- RViz'de **Nav2 Goal** verirken oku sürükleyerek robotun bakacağı yönü seç. Hedefte dönme şu an kapalıdır (`yaw_goal_tolerance 3.14`), robot sadece konuma gider.
 - `my_robot_core/obstacle_avoidance` node'u Nav2 ile aynı anda çalıştırılmamalıdır, ikisi de `/cmd_vel`'e yazar.
 - `nav2_params.yaml` içindeki davranış ağacı yolu mutlaktır, farklı bir makinede kendi yoluna göre değiştirilmelidir.

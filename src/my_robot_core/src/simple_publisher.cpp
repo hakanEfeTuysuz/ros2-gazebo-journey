@@ -3,7 +3,6 @@
 #include <chrono>
 #include <string>
 
-using namespace std;
 using namespace std::chrono_literals;
 
 class SimplePublisher : public rclcpp::Node {
@@ -14,13 +13,13 @@ public:
         publisher_ = this->create_publisher<std_msgs::msg::String>("chatter", 10);
         
         // 1 saniyede bir timer_callback fonksiyonunu otomatik tetikle
-        timer_ = this->create_wall_timer(1s, bind(&SimplePublisher::timer_callback, this));
+        timer_ = this->create_wall_timer(1s, std::bind(&SimplePublisher::timer_callback, this));
     }
 
 private:
     void timer_callback() {
         auto message = std_msgs::msg::String();
-        message.data = "ROS 2 Yayini Aktif! Mesaj No: " + to_string(count_++);
+        message.data = "ROS 2 Yayini Aktif! Mesaj No: " + std::to_string(count_++);
         
         // Terminale log basalım ki çalıştığını görelim
         RCLCPP_INFO(this->get_logger(), "Yayinlanan: '%s'", message.data.c_str());
@@ -36,7 +35,7 @@ private:
 
 int main(int argc, char * argv[]) {
     rclcpp::init(argc, argv);
-    rclcpp::spin(make_shared<SimplePublisher>()); // Düğümü sonsuz döngüde yaşat
+    rclcpp::spin(std::make_shared<SimplePublisher>()); // Düğümü sonsuz döngüde yaşat
     rclcpp::shutdown();
     return 0;
 }

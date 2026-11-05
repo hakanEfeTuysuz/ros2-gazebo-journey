@@ -6,6 +6,8 @@ Simülasyon + Nav2 çalışırken sırayla hedefler gönderir ve her hedef için
   - clear : robot GÖVDESİNİN (footprint dikdörtgeni) engele en yakın mesafesi [m]
   - goal  : hedef ile Nav2'nin bildiği konum (map -> base_footprint) farkı [m, rad]
   - loc   : AMCL tahmini ile Gazebo gerçek konumu (/ground_truth) farkı [m]
+  - osc   : kontrolcünün dönüş komutunun (cmd_vel_nav, |wz| > 0.1) yön değiştirme
+            sayısı; sağ-sol salınımın ölçüsü
 En sonda özet basar; herhangi bir hedef başarısız olursa çıkış kodu 1 olur.
 
 Kullanım:
@@ -20,7 +22,7 @@ import sys
 import time
 
 import rclpy
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, Twist
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 from nav_msgs.msg import Odometry
 from rclpy.qos import qos_profile_sensor_data
@@ -45,6 +47,9 @@ GOALS = [
     # Zor hedefler: inflation (renkli) bölgesinde, engele ~0.3 m.
     ('divider_back_close', 1.45, -1.55, 0.785),
     ('near_pillar', 1.5, 0.55, 3.14),
+    # Kullanıcının elle verip robotun zorlandığı hedefler
+    ('user_divider', 1.50, -1.40, -1.57),
+    ('user_north_wall', -1.3, 2.5, 3.14),
     ('home', 0.0, 0.0, 0.0),
 ]
 
@@ -80,7 +85,8 @@ def main():
     rclpy.init()
     nav = BasicNavigator()
 
-    state = {'clear': float('inf'), 'truth': None, 'loc_err_max': 0.0}
+    state = {'clear': float('inf'), 'truth': None, 'loc_err_max': 0.0,
+             'osc': 0, 'last_sign': 0}
     tf_buffer = Buffer()
     TransformListener(tf_buffer, nav)
 
@@ -92,6 +98,15 @@ def main():
             c = footprint_clearance(LASER_X + r * math.cos(a), r * math.sin(a))
             if c < state['clear']:
                 state['clear'] = c
+
+    def on_cmd(msg):
+        wz = msg.angular.z
+        if abs(wz) < 0.1:
+            return
+        sign = 1 if wz > 0 else -1
+        if state['last_sign'] and sign != state['last_sign']:
+            state['osc'] += 1
+        state['last_sign'] = sign
 
     def on_truth(msg):
         state['truth'] = msg.pose.pose
@@ -105,6 +120,7 @@ def main():
 
     nav.create_subscription(LaserScan, 'scan', on_scan, qos_profile_sensor_data)
     nav.create_subscription(Odometry, 'ground_truth', on_truth, 10)
+    nav.create_subscription(Twist, 'cmd_vel_nav', on_cmd, 10)
 
     nav.waitUntilNav2Active()
 
@@ -113,6 +129,8 @@ def main():
         for name, x, y, yaw in GOALS:
             state['clear'] = float('inf')
             state['loc_err_max'] = 0.0
+            state['osc'] = 0
+            state['last_sign'] = 0
             t0 = time.monotonic()
             nav.goToPose(make_pose(nav, x, y, yaw))
             recoveries = 0
@@ -146,9 +164,9 @@ def main():
 
             ok = res == TaskResult.SUCCEEDED and not timed_out
             results.append((rnd, name, ok, dt, recoveries, state['clear'], err_xy, err_yaw,
-                            state['loc_err_max']))
+                            state['loc_err_max'], state['osc']))
             print(f'[{rnd}] {name:18s} {"OK  " if ok else "FAIL"} {dt:6.1f}s '
-                  f'rec={recoveries} clear={state["clear"]:.2f} '
+                  f'rec={recoveries} osc={state["osc"]} clear={state["clear"]:.2f} '
                   f'goal={err_xy:.2f}m/{err_yaw:.2f}rad loc_max={state["loc_err_max"]:.2f}',
                   flush=True)
 
@@ -156,6 +174,7 @@ def main():
     n_ok = sum(1 for r in results if r[2])
     print(f'{n_ok}/{len(results)} hedef başarılı, '
           f'toplam kurtarma: {sum(r[4] for r in results)}, '
+          f'toplam salınım: {sum(r[9] for r in results)}, '
           f'ortalama süre: {sum(r[3] for r in results) / len(results):.1f}s, '
           f'en küçük gövde mesafesi: {min(r[5] for r in results):.2f}m, '
           f'en büyük lokalizasyon hatası: {max(r[8] for r in results):.2f}m')

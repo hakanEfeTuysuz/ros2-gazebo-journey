@@ -27,11 +27,12 @@ public:
   ObstacleAvoidance()
   : Node("obstacle_avoidance")
   {
-    // Eşikler lidar merkezine göredir; lidar ön tampondan ~0.15 m geridedir.
+    // Eşikler lidar merkezine göredir; lidar ön tampondan 0.15 m, arka tampondan
+    // 0.35 m uzaktadır.
     critical_dist_ = declare_parameter("critical_dist", 0.40);
     enter_turn_dist_ = declare_parameter("enter_turn_dist", 0.65);
     exit_turn_dist_ = declare_parameter("exit_turn_dist", 0.80);
-    back_safe_dist_ = declare_parameter("back_safe_dist", 0.30);
+    back_safe_dist_ = declare_parameter("back_safe_dist", 0.55);  // arka tampona ~0.20 m
     // Ön koni yarı açısı: 30 derece, 38 cm genişliği ve ön çıkıntıyı kapsar.
     front_half_angle_ = declare_parameter("front_half_angle", 0.5236);
     forward_speed_ = declare_parameter("forward_speed", 0.20);

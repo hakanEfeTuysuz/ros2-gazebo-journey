@@ -166,9 +166,10 @@ controller_server:
       critics: ["RotateToGoal", "Oscillation", "ObstacleFootprint", "PreferForward", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
       ObstacleFootprint.scale: 0.02
       PathAlign.scale: 32.0
-      PathAlign.forward_point_distance: 0.1
+      # Yöne bakılan nokta; çok yakın (0.1) olunca robot sağa-sola salınıyordu
+      PathAlign.forward_point_distance: 0.325
       GoalAlign.scale: 24.0
-      GoalAlign.forward_point_distance: 0.1
+      GoalAlign.forward_point_distance: 0.325
       PathDist.scale: 32.0
       GoalDist.scale: 24.0
       RotateToGoal.scale: 32.0
@@ -269,7 +270,8 @@ planner_server:
     planner_plugins: ["GridBased"]
     GridBased:
       plugin: "nav2_navfn_planner/NavfnPlanner"
-      tolerance: 0.5
+      # Ulaşılamaz hedefler (duvar/engel içi) hızlı reddedilsin diye küçük
+      tolerance: 0.25
       use_astar: false
       allow_unknown: false
 

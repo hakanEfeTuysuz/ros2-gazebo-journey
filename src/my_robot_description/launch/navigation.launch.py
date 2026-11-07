@@ -1,4 +1,5 @@
-"""Nav2 (AMCL + map_server + planner/controller) bu paketin harita ve parametreleriyle.
+"""
+Nav2 (AMCL + map_server + planner/controller) bu paketin harita ve parametreleriyle.
 
 Davranış ağacı yolu burada paket dizininden çözülür; nav2_params.yaml
 içinde mutlak yol tutulmaz.

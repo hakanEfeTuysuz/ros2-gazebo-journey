@@ -137,7 +137,8 @@ controller_server:
     FollowPath:
       plugin: "dwb_core::DWBLocalPlanner"
       debug_trajectory_details: False
-      min_vel_x: 0.0
+      # Duvar dibinde dönebilmek için yavaş geri gitmeye izin ver (PreferForward ileriyi tercih ettirir)
+      min_vel_x: -0.05
       min_vel_y: 0.0
       max_vel_x: 0.20
       max_vel_y: 0.0
@@ -164,7 +165,7 @@ controller_server:
       short_circuit_trajectory_evaluation: True
       stateful: True
       critics: ["RotateToGoal", "Oscillation", "ObstacleFootprint", "PreferForward", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
-      ObstacleFootprint.scale: 0.02
+      ObstacleFootprint.scale: 0.04
       PathAlign.scale: 32.0
       # Yöne bakılan nokta; çok yakın (0.1) olunca robot sağa-sola salınıyordu
       PathAlign.forward_point_distance: 0.325
@@ -210,7 +211,8 @@ local_costmap:
           obstacle_min_range: 0.0
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 8.0
+        # Maliyet engelden uzaklaştıkça daha yavaş düşsün: robot engel kenarlarına daha geniş pay bırakır
+        cost_scaling_factor: 5.0
         inflation_radius: 0.40
       always_send_full_costmap: True
 

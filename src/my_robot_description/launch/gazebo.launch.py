@@ -1,4 +1,8 @@
-"""Gazebo Classic + robot_state_publisher + robotu dünyaya ekleme."""
+"""
+Gazebo Classic + robot_state_publisher + robotu dünyaya ekleme.
+
+Argümanlar: use_sim_time, gui, world, x, y, yaw.
+"""
 
 import os
 

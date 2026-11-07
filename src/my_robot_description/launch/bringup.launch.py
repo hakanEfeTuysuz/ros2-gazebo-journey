@@ -1,7 +1,9 @@
-"""Tek komutla: Gazebo + Nav2 + (isteğe bağlı) RViz.
+"""
+Tek komutla: Gazebo + Nav2 + (isteğe bağlı) RViz.
 
-  ros2 launch my_robot_description bringup.launch.py
-  ros2 launch my_robot_description bringup.launch.py gui:=false rviz:=false   # headless
+Kullanım:
+ros2 launch my_robot_description bringup.launch.py
+ros2 launch my_robot_description bringup.launch.py gui:=false rviz:=false  (headless)
 """
 
 import os

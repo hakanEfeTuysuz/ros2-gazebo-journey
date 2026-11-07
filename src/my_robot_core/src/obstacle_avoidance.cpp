@@ -33,6 +33,9 @@ public:
     enter_turn_dist_ = declare_parameter("enter_turn_dist", 0.65);
     exit_turn_dist_ = declare_parameter("exit_turn_dist", 0.80);
     back_safe_dist_ = declare_parameter("back_safe_dist", 0.55);  // arka tampona ~0.20 m
+    // Yanlar: lidar gövde kenarından 0.19 m içeride; 0.35 m => kenara ~0.16 m.
+    side_safe_dist_ = declare_parameter("side_safe_dist", 0.35);
+    side_steer_gain_ = declare_parameter("side_steer_gain", 2.0);
     // Ön koni yarı açısı: 30 derece, 38 cm genişliği ve ön çıkıntıyı kapsar.
     front_half_angle_ = declare_parameter("front_half_angle", 0.5236);
     forward_speed_ = declare_parameter("forward_speed", 0.20);
@@ -90,6 +93,9 @@ private:
     const float min_left = min_range_in_sector(*msg, side_center, side_half);
     const float min_right = min_range_in_sector(*msg, -side_center, side_half);
     const float min_back = min_range_in_sector(*msg, M_PI, 0.61);
+    // Gövdenin yanları (30°-150°): ileri giderken duvara sürtmeyi önlemek için.
+    const float min_side_left = min_range_in_sector(*msg, M_PI_2, M_PI / 3.0);
+    const float min_side_right = min_range_in_sector(*msg, -M_PI_2, M_PI / 3.0);
 
     const RobotState previous = state_;
     switch (state_) {
@@ -128,6 +134,14 @@ private:
     switch (state_) {
       case RobotState::MOVING_FORWARD:
         cmd.linear.x = forward_speed_;
+        // Yana çok yaklaşılırsa ters yöne hafifçe dön (pozitif = sola).
+        if (min_side_right < side_safe_dist_) {
+          cmd.angular.z += side_steer_gain_ * (side_safe_dist_ - min_side_right);
+        }
+        if (min_side_left < side_safe_dist_) {
+          cmd.angular.z -= side_steer_gain_ * (side_safe_dist_ - min_side_left);
+        }
+        cmd.angular.z = std::clamp(cmd.angular.z, -turn_speed_, turn_speed_);
         break;
       case RobotState::TURNING_LEFT:
         cmd.angular.z = turn_speed_;
@@ -166,6 +180,7 @@ private:
   }
 
   double critical_dist_, enter_turn_dist_, exit_turn_dist_, back_safe_dist_;
+  double side_safe_dist_, side_steer_gain_;
   double front_half_angle_, forward_speed_, turn_speed_, backup_speed_, scan_timeout_;
   RobotState state_{RobotState::MOVING_FORWARD};
   rclcpp::Time last_scan_time_{0, 0, RCL_ROS_TIME};

@@ -34,7 +34,9 @@ sudo apt install ros-humble-navigation2 ros-humble-nav2-bringup ros-humble-gazeb
 │   └── my_robot_core/          obstacle_avoidance.cpp (Nav2'den bağımsız basit engel kaçınma)
 └── tools/
     ├── nav_goal_test.py        Otomatik Nav2 hedef testi (bkz. Test)
-    └── run_sim_test.sh         Headless simülasyon + test, tek komut
+    ├── run_sim_test.sh         Headless simülasyon + Nav2 testi, tek komut
+    ├── avoidance_monitor.py    obstacle_avoidance düğümünü izler
+    └── run_avoidance_test.sh   Headless simülasyon + obstacle_avoidance testi
 ```
 
 ## Kurulum ve çalıştırma
@@ -104,12 +106,16 @@ TF zinciri: `map → odom → base_footprint → base_link → laser_frame`
 | 17 | Robot sebepsiz "takılıyor", kurtarma davranışları başlıyor | Progress checker 8 s'de 0.5 m bekliyordu; 0.2 m/s robot yerinde dönüp manevra yaparken bunu yapamıyor → sahte `Failed to make progress` | `required_movement_radius 0.25`, `movement_time_allowance 10` | Test (aşağıda) |
 | 19 | Robot giderken sağa-sola salınıyor | DWB `PathAlign`/`GoalAlign` `forward_point_distance 0.1`: yön çok yakın bir noktaya göre düzeltiliyordu | `0.325` (Nav2 varsayılanı) | Test: salınım 199 → 63 yön değişimi, `user_divider` FAIL → 19 s'de OK |
 | 20 | Duvar/engel içine verilen hedeflerde robot dakikalarca uğraşıyor | Planlayıcı `tolerance 0.5` ulaşılamaz hedefe en yakın noktaya yol çiziyordu | `tolerance 0.25` | Kullanıcı oturum logları |
+| 21 | Duvar dibinde dönerken robot sağa-sola deniyor, kurtarmaya giriyor | DWB `min_vel_x 0.0`: hiç geri gidemiyordu, ön köşe duvara değince dönecek yer bulamıyordu | `min_vel_x -0.05` (yavaş geri), `PreferForward` ileriyi tercih ettiriyor | Test: `user_north_wall` 51 → 6-18 salınım, kurtarma yok |
+| 22 | Robot engel kenarlarına çok yaklaşıyor | `ObstacleFootprint.scale 0.02`, local `cost_scaling_factor 8` | `0.04` / `5.0` | Test: 22/22 |
+| 23 | `obstacle_avoidance` duvara yandan sürtüyor (0.04 m) | Sadece ön koni (±30°) izleniyordu | İleri giderken yan (30°-150°) mesafe < 0.35 m ise ters yöne yumuşak dönüş | Test: en yakın mesafe 0.16 m |
 | 18 | Gazebo + Nav2 tek launch'ta çökmesi | gazebo_ros `gzserver.launch.py` da `params_file` (boş) tanımlıyor, launch yapılandırmaları global | `bringup.launch.py`'de her include `GroupAction` ile kapsamlı | Headless test |
 
 ## Geliştirilecekler
 
 - ~~**Çubuğun arkasındaki hedefler**~~ (çözüldü): Uzun çubuğun arkasındaki renkli (inflation) bölgeye hedef verilince robot bazen yavaşlayıp duruyor. Beyaz bölgelerdeki hedefler sorunsuz çalışıyor. Asıl sebep progress checker'ın sahte "Failed to make progress" üretmesiydi (#17); düzeltmeden sonra testte bu hedefler kurtarmasız tamamlanıyor.
-- **Duvar dibinde dönme:** Aks gövdenin gerisinde olduğu için yerinde dönerken ön köşe 0.44 m'lik yay çiziyor; duvara yakın hedeflerde robot hâlâ sağa-sola deneyerek dönüyor (testte `user_north_wall`). Tekerlekleri ortaya almak denendi: dönüş yarıçapı 0.31 m'ye indi ama arka çıkıntı büyüdüğü için robot engel dibinde sıkıştı; çalışması için DWB'nin geri gidebilmesi ve çarpışma payı ayarı gerekiyor.
+- **Engel kenarına yakın geçiş:** Ayırıcının ucu ve sütun gibi dar yerlerde gövde engele 2-4 cm'ye kadar yaklaşıyor ve nadiren (`behind_divider`, 2 turun 1'inde) uzun salınım/kurtarma oluyor. Tek parametreyle çözülmüyor; Smac Hybrid/Lattice gibi gövde şeklini bilen bir global planlayıcı veya gövde geometrisi değişikliği gerekebilir.
+- **Tekerlekleri ortaya almak** denendi: dönüş yarıçapı 0.44 → 0.31 m oldu ama o anki ayarlarla robot engel dibinde sıkıştı (9/11). Geri gitme açık olan şu anki ayarlarla yeniden denenebilir.
 - **Hedef seçimi:** Robot 0.38 m genişliğinde; RViz'de duvara ~0.3 m'den, engellere ~0.25 m'den yakın hedef vermek fiziksel olarak mümkün değil.
 - **Engele yakın geçiş:** Zor hedeflerde gövde engele 5 cm'ye kadar yaklaşıyor (çarpmıyor). `ObstacleFootprint.scale` ve local inflation ayarıyla artırılabilir.
 - **Gazebo Classic desteği bitti (Ocak 2025):** Uzun vadede Gazebo Harmonic + `ros_gz`'ye geçilmeli.
@@ -138,8 +144,21 @@ Salınım testi (1 tur × 11 hedef, kullanıcının zorlandığı 2 hedef eklend
 | Ayar | Başarı | Kurtarma | Salınım (yön değişimi) |
 |---|---|---|---|
 | Önceki | 10/11 | 21 | 199 |
-| **Şu anki: `forward_point_distance 0.325`, planlayıcı `tolerance 0.25`** | **11/11** | **2** | **63** |
+| `forward_point_distance 0.325`, planlayıcı `tolerance 0.25` | 11/11 | 2 | 63 |
+| **Şu anki: + yavaş geri gitme, engel maliyeti 0.04, local inflation 5.0** (2 tur) | **22/22** | **3** | **109 (tur başına ~55)** |
 | Tekerlekler gövde ortasında (denendi, kullanılmadı) | 9/11 | 29 | 345 |
+
+`obstacle_avoidance` testi (Nav2 yok, düğüm kendi başına gezer):
+
+```bash
+tools/run_avoidance_test.sh --duration 180
+```
+
+Sonuç: 180 s'de 31.9 m yol, hiç sıkışma yok, gövdenin engele en yakın mesafesi 0.16 m
+(yan sürtünme koruması eklenmeden önce 0.04 m).
+
+CI: GitHub Actions (`.github/workflows/build.yml`) her push'ta `ros:humble` içinde derler ve
+lint testlerini (`colcon test`) çalıştırır. Simülasyon testleri GPU/zaman gerektirdiği için CI'da değil, yerelde çalıştırılır.
 
 ## Notlar
 

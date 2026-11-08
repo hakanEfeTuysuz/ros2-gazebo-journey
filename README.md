@@ -114,8 +114,14 @@ TF zinciri: `map → odom → base_footprint → base_link → laser_frame`
 ## Geliştirilecekler
 
 - ~~**Çubuğun arkasındaki hedefler**~~ (çözüldü): Uzun çubuğun arkasındaki renkli (inflation) bölgeye hedef verilince robot bazen yavaşlayıp duruyor. Beyaz bölgelerdeki hedefler sorunsuz çalışıyor. Asıl sebep progress checker'ın sahte "Failed to make progress" üretmesiydi (#17); düzeltmeden sonra testte bu hedefler kurtarmasız tamamlanıyor.
-- **Engel kenarına yakın geçiş:** Ayırıcının ucu ve sütun gibi dar yerlerde gövde engele 2-4 cm'ye kadar yaklaşıyor ve nadiren (`behind_divider`, 2 turun 1'inde) uzun salınım/kurtarma oluyor. Tek parametreyle çözülmüyor; Smac Hybrid/Lattice gibi gövde şeklini bilen bir global planlayıcı veya gövde geometrisi değişikliği gerekebilir.
-- **Tekerlekleri ortaya almak** denendi: dönüş yarıçapı 0.44 → 0.31 m oldu ama o anki ayarlarla robot engel dibinde sıkıştı (9/11). Geri gitme açık olan şu anki ayarlarla yeniden denenebilir.
+- **Engel kenarına yakın geçiş:** Ayırıcının ucu ve sütun gibi dar yerlerde gövde engele 2-4 cm'ye kadar yaklaşıyor ve nadiren uzun salınım/kurtarma oluyor. Denenen ve şu anki ayardan kötü çıkan çözümler (2 tur × 11 hedef):
+
+  | Deneme | Başarı | Kurtarma | Neden kullanılmadı |
+  |---|---|---|---|
+  | **Şu anki ayar** | **22/22** | **3** | — |
+  | Smac Lattice planlayıcı (gövde şeklini bilir) | 17/22 | 121 | Engele yakın hedeflere yol bulamayıp saniyeler içinde vazgeçiyor |
+  | Tekerlekler gövde ortasında (+ şu anki ayarlar) | 20/22 | 20 | Dönüş yarıçapı 0.44 → 0.31 m, açık alanda daha iyi; ama ayırıcının dibinde park edince uzayan arka gövde yüzünden çıkamıyor |
+  | Sadece yol geçersizleşince yeniden planla (BT) | 20/22 | 36 | Ayırıcının iki yanındaki yol değişimini durduruyor ama kurtarmadan sonra eski yolda ısrar edip tekrar takılıyor |
 - **Hedef seçimi:** Robot 0.38 m genişliğinde; RViz'de duvara ~0.3 m'den, engellere ~0.25 m'den yakın hedef vermek fiziksel olarak mümkün değil.
 - **Engele yakın geçiş:** Zor hedeflerde gövde engele 5 cm'ye kadar yaklaşıyor (çarpmıyor). `ObstacleFootprint.scale` ve local inflation ayarıyla artırılabilir.
 - **Gazebo Classic desteği bitti (Ocak 2025):** Uzun vadede Gazebo Harmonic + `ros_gz`'ye geçilmeli.

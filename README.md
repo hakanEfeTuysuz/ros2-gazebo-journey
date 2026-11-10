@@ -104,12 +104,11 @@ TF zinciri: `map → odom → base_footprint → base_link → laser_frame`
 | 15 | Lokalizasyon test edilmiyordu | `odometry_source 1`: Gazebo kusursuz konum veriyordu, AMCL `alpha 0.01` buna göre | Encoder odometrisi (`0`), AMCL `alpha1-4: 0.2` | AMCL hatası gerçek konuma göre ≤ 0.15 m (test) |
 | 16 | Robot hedefe ~0.3 m kala duruyor, yönü yok sayıyor | `xy_goal_tolerance 0.30`, `yaw_goal_tolerance 3.14` | `0.15` / `0.25` | Test: hedef hatası ~0.14 m, yön ≤ 0.26 rad |
 | 17 | Robot sebepsiz "takılıyor", kurtarma davranışları başlıyor | Progress checker 8 s'de 0.5 m bekliyordu; 0.2 m/s robot yerinde dönüp manevra yaparken bunu yapamıyor → sahte `Failed to make progress` | `required_movement_radius 0.25`, `movement_time_allowance 10` | Test (aşağıda) |
-| 19 | Robot giderken sağa-sola salınıyor | DWB `PathAlign`/`GoalAlign` `forward_point_distance 0.1`: yön çok yakın bir noktaya göre düzeltiliyordu | `0.325` (Nav2 varsayılanı) | Test: salınım 199 → 63 yön değişimi, `user_divider` FAIL → 19 s'de OK |
-| 20 | Duvar/engel içine verilen hedeflerde robot dakikalarca uğraşıyor | Planlayıcı `tolerance 0.5` ulaşılamaz hedefe en yakın noktaya yol çiziyordu | `tolerance 0.25` | Kullanıcı oturum logları |
-| 21 | Duvar dibinde dönerken robot sağa-sola deniyor, kurtarmaya giriyor | DWB `min_vel_x 0.0`: hiç geri gidemiyordu, ön köşe duvara değince dönecek yer bulamıyordu | `min_vel_x -0.05` (yavaş geri), `PreferForward` ileriyi tercih ettiriyor | Test: `user_north_wall` 51 → 6-18 salınım, kurtarma yok |
-| 22 | Robot engel kenarlarına çok yaklaşıyor | `ObstacleFootprint.scale 0.02`, local `cost_scaling_factor 8` | `0.04` / `5.0` | Test: 22/22 |
-| 23 | `obstacle_avoidance` duvara yandan sürtüyor (0.04 m) | Sadece ön koni (±30°) izleniyordu | İleri giderken yan (30°-150°) mesafe < 0.35 m ise ters yöne yumuşak dönüş | Test: en yakın mesafe 0.16 m |
-| 18 | Gazebo + Nav2 tek launch'ta çökmesi | gazebo_ros `gzserver.launch.py` da `params_file` (boş) tanımlıyor, launch yapılandırmaları global | `bringup.launch.py`'de her include `GroupAction` ile kapsamlı | Headless test |
+| 18 | Robot giderken sağa-sola salınıyor | DWB `PathAlign`/`GoalAlign` `forward_point_distance 0.1`: yön çok yakın bir noktaya göre düzeltiliyordu | `0.325` (Nav2 varsayılanı) | Test: salınım 199 → 63 yön değişimi, `user_divider` FAIL → 19 s'de OK |
+| 19 | Duvar/engel içine verilen hedeflerde robot dakikalarca uğraşıyor | Planlayıcı `tolerance 0.5` ulaşılamaz hedefe en yakın noktaya yol çiziyordu | `tolerance 0.25` | Kullanıcı oturum logları |
+| 20 | Duvar dibinde dönerken robot sağa-sola deniyor, kurtarmaya giriyor | DWB `min_vel_x 0.0`: hiç geri gidemiyordu, ön köşe duvara değince dönecek yer bulamıyordu | `min_vel_x -0.05` (yavaş geri), `PreferForward` ileriyi tercih ettiriyor | Test: `user_north_wall` 51 → 6-18 salınım, kurtarma yok |
+| 21 | Robot engel kenarlarına çok yaklaşıyor | `ObstacleFootprint.scale 0.02`, local `cost_scaling_factor 8` | `0.04` / `5.0` | Test: 22/22 |
+| 22 | `obstacle_avoidance` duvara yandan sürtüyor (0.04 m) | Sadece ön koni (±30°) izleniyordu | İleri giderken yan (30°-150°) mesafe < 0.35 m ise ters yöne yumuşak dönüş | Test: en yakın mesafe 0.16 m |
 
 ## Geliştirilecekler
 

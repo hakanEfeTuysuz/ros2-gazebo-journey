@@ -32,6 +32,8 @@ sudo apt install ros-humble-navigation2 ros-humble-nav2-bringup ros-humble-gazeb
 │   │   ├── launch/             bringup.launch.py (hepsi), gazebo.launch.py, navigation.launch.py
 │   │   └── robot_view.rviz
 │   └── my_robot_core/          obstacle_avoidance.cpp (Nav2'den bağımsız basit engel kaçınma)
+├── .github/workflows/          build.yml (CI: derleme + lint)
+├── LICENSE                     Apache-2.0
 └── tools/
     ├── nav_goal_test.py        Otomatik Nav2 hedef testi (bkz. Test)
     ├── run_sim_test.sh         Headless simülasyon + Nav2 testi, tek komut
@@ -92,12 +94,12 @@ TF zinciri: `map → odom → base_footprint → base_link → laser_frame`
 | 3 | Gazebo ve Nav2 ivme limitleri uyumsuz | Tekerlek ivmesi 5 rad/s² × 0.06 m = 0.3 m/s², DWB 0.5 m/s² varsayıyordu | torque 10, ivme 10 rad/s² (0.6 m/s²), update_rate 50 | Nav2 limitlerinden gevşek |
 | 4 | Robotun arkasında hayalet engeller | Lidar şasi üstünden 2 cm yükseklikte, ışınlar kendi şasisine çarpıyordu (arkada 0.35 m'de) | Lidar `z=0.07 → 0.10` | Arka ışınlar kayboldu |
 | 5 | Haritada tek hücrelik hayalet engel | SLAM gürültüsü, (x=0.87, y=-2.14) | Hücre temizlendi | Piksel analizi |
-| 6 | Dar geçişlerde robot geçemiyor | Büyük `inflation_radius` 1.1 m'lik boğazları kapatıyordu | Global costmap: `inflation_radius 0.45`, `cost_scaling_factor 6.0`. Local costmap: `0.40` / `8.0` | Boğaz genişliği haritadan hesaplandı (1.10 m), temiz bant 0.20 m |
+| 6 | Dar geçişlerde robot geçemiyor | Büyük `inflation_radius` 1.1 m'lik boğazları kapatıyordu | Global costmap: `inflation_radius 0.45`, `cost_scaling_factor 6.0`. Local costmap: `0.40` / `8.0` (#21'de `5.0` yapıldı) | Boğaz genişliği haritadan hesaplandı (1.10 m), temiz bant 0.20 m |
 | 7 | Robot köşelere/duvara vuruyor | DWB `BaseObstacle` kriteri sadece merkez noktasına bakıyor, gövde köşelerine bakmıyor | `ObstacleFootprint` kriterine geçildi | Önceki vurmalar azaldı |
-| 8 | Sıkışınca geri çıkamıyor | DWB geri gitmiyor; varsayılan kurtarma sırasında BackUp en sondaydı ve çok yavaştı | Özel davranış ağacı: BackUp ilk sırada (0.30 m, 0.10 m/s). DWB'de `min_vel_x` 0.0 bırakıldı, yani normal sürüşte geri gitmez | Kurtarma sadece takılınca çalışır |
+| 8 | Sıkışınca geri çıkamıyor | DWB geri gitmiyor; varsayılan kurtarma sırasında BackUp en sondaydı ve çok yavaştı | Özel davranış ağacı: BackUp ilk sırada (0.30 m, 0.10 m/s). DWB'de `min_vel_x` 0.0 bırakıldı (#20'de `-0.05` yapıldı) | Kurtarma sadece takılınca çalışır |
 | 9 | Frame tutarsızlığı | AMCL `base_footprint`, diğerleri `base_link` | Hepsi `base_footprint` | TF zinciri |
 | 10 | `config` / `maps` kurulmuyordu | `CMakeLists.txt` `install` komutunda yoktu | `config`, `maps`, `behavior_trees`, `robot_view.rviz` eklendi | `ls install/.../share/my_robot_description/` |
-| 11 | Köşe/duvar kenarı hedeflerinde robot takılıyor | Hedef, duvarın yasak bandına düşüyor | Planlayıcı `tolerance 0.5`. (Önceki `xy 0.30` / `yaw 3.14` geçici çözümü #16'da geri alındı) | Köşe hedefleri `Goal succeeded` ile tamamlanıyor |
+| 11 | Köşe/duvar kenarı hedeflerinde robot takılıyor | Hedef, duvarın yasak bandına düşüyor | Planlayıcı `tolerance 0.5` (#19'da `0.25` yapıldı). Önceki `xy 0.30` / `yaw 3.14` geçici çözümü #16'da geri alındı | Köşe hedefleri `Goal succeeded` ile tamamlanıyor |
 | 12 | Takılma geç fark ediliyordu | `movement_time_allowance` 20 s | 8 s (#17'de yeniden ayarlandı) | Kurtarma daha erken başlıyor |
 | 13 | DWB bir yöne kilitlenebiliyor | `Oscillation` kriterinde zaman bazlı sıfırlama kapalıydı | `Oscillation.oscillation_reset_time: 1.0` | Kaynak kod okundu |
 | 14 | Proje başka makinede çalışmıyor | Davranış ağacı yolu yaml'da mutlak (`/home/hakanefe/...`) | `navigation.launch.py` yolu paket dizininden `RewrittenYaml` ile yazıyor | `ros2 param get /bt_navigator default_nav_to_pose_bt_xml` → `install/.../share/...` |
@@ -122,12 +124,11 @@ TF zinciri: `map → odom → base_footprint → base_link → laser_frame`
   | Tekerlekler gövde ortasında (+ şu anki ayarlar) | 20/22 | 20 | Dönüş yarıçapı 0.44 → 0.31 m, açık alanda daha iyi; ama ayırıcının dibinde park edince uzayan arka gövde yüzünden çıkamıyor |
   | Sadece yol geçersizleşince yeniden planla (BT) | 20/22 | 36 | Ayırıcının iki yanındaki yol değişimini durduruyor ama kurtarmadan sonra eski yolda ısrar edip tekrar takılıyor |
 - **Hedef seçimi:** Robot 0.38 m genişliğinde; RViz'de duvara ~0.3 m'den, engellere ~0.25 m'den yakın hedef vermek fiziksel olarak mümkün değil.
-- **Engele yakın geçiş:** Zor hedeflerde gövde engele 5 cm'ye kadar yaklaşıyor (çarpmıyor). `ObstacleFootprint.scale` ve local inflation ayarıyla artırılabilir.
 - **Gazebo Classic desteği bitti (Ocak 2025):** Uzun vadede Gazebo Harmonic + `ros_gz`'ye geçilmeli.
 
 ## Test
 
-`tools/run_sim_test.sh` Gazebo'yu penceresiz açar, Nav2'yi başlatır ve `tools/nav_goal_test.py` ile 9 hedefi (2'si engele ~0.3 m yakın, zor) sırayla gönderir:
+`tools/run_sim_test.sh` Gazebo'yu penceresiz açar, Nav2'yi başlatır ve `tools/nav_goal_test.py` ile 11 hedefi (4'ü engele/duvara ~0.3 m yakın, zor) sırayla gönderir:
 
 ```bash
 tools/run_sim_test.sh --rounds 2
@@ -163,7 +164,7 @@ Sonuç: 180 s'de 31.9 m yol, hiç sıkışma yok, gövdenin engele en yakın mes
 (yan sürtünme koruması eklenmeden önce 0.04 m).
 
 CI: GitHub Actions (`.github/workflows/build.yml`) her push'ta `ros:humble` içinde derler ve
-lint testlerini (`colcon test`) çalıştırır. Simülasyon testleri GPU/zaman gerektirdiği için CI'da değil, yerelde çalıştırılır.
+lint testlerini (`colcon test`) çalıştırır. Simülasyon testleri uzun sürdüğü (~10 dk) için CI'da değil, yerelde çalıştırılır.
 
 ## Notlar
 
